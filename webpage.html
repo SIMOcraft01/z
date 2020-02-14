@@ -30,15 +30,42 @@
 var canvas = document.getElementById("myCanvas");
 var ctx = canvas.getContext("2d");
 document.addEventListener("keydown", keyDownHandler, false);
+document.addEventListener("mousemove", mouseMoveHandler, false);
+canvas.addEventListener("mousedown", getPosition, false);
+canvas.addEventListener("mouseup", getPosition2, false);
+
 var inputVal = "";
 var letterAmount = 9;
 var letterCount1 = [];
 var letterCount2 = [];
 var letters = [];
 var words = [];
+words["a"] = 1;
+words["e"] = 1;
+words["i"] = 1;
+words["o"] = 1;
+words["u"] = 1;
+words["tin"] = 1;
 var correctWords = [];
 var hasGameStarted = false;
 var score = 0;
+var pX = 400;
+var pY = 300;
+var mouseIsDown = false;
+
+function mouseMoveHandler(e) {
+    pX = e.clientX - canvas.offsetLeft;
+    pY = e.clientY - canvas.offsetTop;
+}
+
+function getPosition2(event){
+	mouseIsDown = false;
+}
+
+function getPosition(event)
+{
+	mouseIsDown = true;
+}
 
 for(var a = 0; a < 26; a++)
 {
@@ -225,6 +252,36 @@ function drawCorrectWords()
 	}
 }
 
+function isWordInDictionary(word1)
+{
+	var url = 'http://47.185.29.89:8080/demo/checkWord';
+	var data = JSON.stringify({word: word1});
+	
+	fetch(url, {
+		method: 'POST',//or 'PUT'
+		body: data,//data can be 'string' or (object)!
+		headers:{
+				'Content-Type': 'application/json'
+				}
+			}).then(res =>res.text())
+			.then(response => {
+			var json = JSON.parse(response);
+			if(json.word == "!")
+			{
+			}
+			else
+			{
+				correctWords.push(json.word);
+				correctWords.sort();
+				score += Math.floor(json.word.length * 10 * (1.5*json.word.length))
+				document.getElementById("myInput").value = "";
+				}
+				})
+				.catch(error => console.error('Error:', error));
+				
+}
+
+
 function drawBoxes()
 {
 	for(var a = 0; a < letterAmount; a++)
@@ -252,53 +309,77 @@ function drawBoxes()
 <!-- }) -->
 <!-- } -->
 
+function resetButton()
+{
+	if(pX >= 600 && pX <= 750 && pY >= 400 && pY <= 500)
+	{
+		ctx.fillStyle = "rgb(0,255,0)"
+		ctx.fillRect(600, 400, 150, 100);
+		ctx.font = "50px Arial";
+		ctx.fillStyle = "rgb(255,0,0)"
+		ctx.fillText("Reset", 610, 465);
+		if(mouseIsDown)
+		{
+			getLetters();
+			score = 0;
+			correctWords = [];
+			inputVal = null;
+			document.getElementById("myInput").value = "";
+		}
+	}
+	else
+	{
+		ctx.fillStyle = "rgb(255,0,0)"
+		ctx.fillRect(600, 400, 150, 100);
+		ctx.font = "50px Arial";
+		ctx.fillStyle = "rgb(0,255,0)"
+		ctx.fillText("Reset", 610, 465
+		);
+	}
+}
+
 function draw()
 {
 if(!hasGameStarted)
 {
-//console.log("words.length = " + words.length);
-	if(words.length == 0)
-	{
-		hasGameStarted = true;
+	hasGameStarted = true;
 		getLetters();
-		fetch('https://raw.githubusercontent.com/SIMOcraft01/assignments/master/words_dictionary.json')
-		.then(function(response) {
-		return response.json();
-		})
-		.then(function(myJson) {
-		words = myJson;
-  });
-	}
-	
 }
+<!-- console.log("words.length = " + words.length); -->
+	<!-- if(words.length == 0) -->
+	<!-- { -->
+		<!-- fetch('https://raw.githubusercontent.com/SIMOcraft01/assignments/master/words_dictionary.json') -->
+		<!-- .then(function(response) { -->
+		<!-- return response.json(); -->
+		<!-- }) -->
+		<!-- .then(function(myJson) { -->
+		<!-- words = myJson; -->
+  <!-- }); -->
+	<!-- } -->
+	
+
 ctx.clearRect(0,0,800,600);
 //console.log("value of blah: " + words["blah"]);
 //console.log("value of blahgghhh: " + words["blahgghhh"]);
 drawBoxes();
+resetButton();
 drawCorrectWords();
 ctx.font = "20px Ariel";
 ctx.fillStyle = "blue";
 ctx.fillText("The entered word is: " + document.getElementById("myInput").value, 100, 25);
 ctx.fillText("Score: " + score, 500, 25);
-if(inputVal != null && words[inputVal] == 1)
+if(inputVal != null)
 {
 	getLetterAmount(inputVal);
-	console.log("letterCount1: " + letterCount1);
-	console.log("letterCount2: " + letterCount2);
 	if(isWordLegal(letterCount1, letterCount2))
 	{
 		if(correctWords.includes(inputVal))
 		{
-			console.log(inputVal + " was already entered.");
 			document.getElementById("myInput").value = "";
 		}
 		else
 		{
-			correctWords.push(inputVal);
-			correctWords.sort();
-			score += Math.floor(inputVal.length * 10 * (1.5*inputVal.length))
-			console.log(inputVal + " was a correct word.");
-			document.getElementById("myInput").value = "";
+			isWordInDictionary(inputVal);
 		}
 	}
 	for(var a = 0; a < 26; a++)
